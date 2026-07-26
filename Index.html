@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tea Estate Office</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans Bengali', 'Hind Siliguri', -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: #f2f5f2;
+    color: #1c2b1c;
+    padding-bottom: 76px;
+  }
+
+  /* ---------- LOGIN ---------- */
+  #loginScreen {
+    max-width: 360px;
+    margin: 80px auto;
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px 22px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+  }
+  #loginScreen h1 { font-size: 22px; color: #146c34; margin-bottom: 4px; }
+  #loginScreen p { font-size: 13px; color: #666; margin-bottom: 18px; }
+  #loginScreen input {
+    width: 100%; padding: 11px; border: 1px solid #d7ddd7; border-radius: 8px;
+    font-size: 15px; margin-bottom: 10px;
+  }
+  .primary-btn {
+    width: 100%; padding: 12px; background: #146c34; color: #fff; border: none;
+    border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .error-msg { color: #c0392b; font-size: 13px; text-align: center; margin-top: 8px; }
+
+  /* ---------- HEADER ---------- */
+  #appScreen { display: none; }
+  header {
+    background: linear-gradient(135deg, #146c34, #1c8a43);
+    color: #fff;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  header .brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; }
+  header .icons { display: flex; align-items: center; gap: 16px; }
+  .icon-btn { position: relative; font-size: 20px; cursor: pointer; }
+  .badge-dot {
+    position: absolute; top: -6px; right: -8px; background: #e74c3c; color: #fff;
+    font-size: 10px; border-radius: 50%; width: 16px; height: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: #fff; color: #146c34;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;
+  }
+
+  main { padding: 14px; max-width: 480px; margin: 0 auto; }
+
+  /* ---------- WELCOME CARD ---------- */
+  .welcome-card {
+    background: #fff; border-radius: 14px; padding: 18px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    position: relative; overflow: hidden;
+  }
+  .welcome-card::after {
+    content: "🍃"; position: absolute; right: 10px; bottom: -10px; font-size: 70px; opacity: 0.12;
+  }
+  .welcome-card h2 { font-size: 19px; }
+  .welcome-card h2 span { color: #146c34; }
+  .welcome-card p { font-size: 13px; color: #666; margin-top: 2px; }
+
+  /* ---------- STAT GRID ---------- */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .stat-card {
+    border-radius: 14px; padding: 14px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .stat-card .top-row { display: flex; justify-content: space-between; align-items: flex-start; }
+  .stat-icon {
+    width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 18px;
+  }
+  .stat-card .label { font-size: 12.5px; color: #444; font-weight: 600; }
+  .stat-card .value { font-size: 22px; font-weight: 700; }
+  .stat-card .sub { font-size: 11.5px; color: #777; }
+  .c-green { background: #e8f6ec; } .c-green .stat-icon { background: #c6ecd2; }
+  .c-blue { background: #e9f2fb; } .c-blue .stat-icon { background: #cde3f7; }
+  .c-purple { background: #f2ecfb; } .c-purple .stat-icon { background: #ddccf5; }
+  .c-yellow { background: #fbf3e3; } .c-yellow .stat-icon { background: #f3e0ac; }
+
+  /* ---------- SECTION CARD ---------- */
+  .section-card {
+    background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .section-head h3 { font-size: 15px; display: flex; align-items: center; gap: 6px; }
+  .section-head a { font-size: 12.5px; color: #146c34; font-weight: 600; cursor: pointer; }
+
+  .task-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #f0f0f0; }
+  .task-row:last-child { border-bottom: none; }
+  .task-icon { width: 32px; height: 32px; border-radius: 8px; background: #eef6ee; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+  .task-text { flex: 1; }
+  .task-text .t1 { font-size: 13.5px; font-weight: 600; }
+  .task-text .t2 { font-size: 11.5px; color: #888; }
+  .pill { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid #ccc; color: #777; }
+  .pill.done { background: #e8f6ec; color: #146c34; border-color: #b8e2c4; }
+  .empty-note { font-size: 13px; color: #999; text-align: center; padding: 12px 0; }
+
+  .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .report-btn {
+    border-radius: 12px; padding: 16px 8px; text-align: center; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600;
+  }
+  .rb1 { background: #fdece0; color: #b5560f; } .rb2 { background: #e6f0fb; color: #1d5fa3; }
+  .rb3 { background: #f0e8fb; color: #6a34b0; } .rb4 { background: #e6f3ea; color: #1d7a3d; }
+
+  /* ---------- BOTTOM NAV ---------- */
+  nav.bottom {
+    position: fixed; bottom: 0; left: 0; right: 0; background: #fff;
+    border-top: 1px solid #eee; display: flex; justify-content: space-around;
+    padding: 8px 0 10px; z-index: 10;
+  }
+  nav.bottom .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 11px; color: #888; cursor: pointer; flex: 1;
+  }
+  nav.bottom .nav-item.active { color: #146c34; font-weight: 700; }
+  nav.bottom .nav-item .ic { font-size: 19px; }
+
+  /* ---------- SUB PAGES ---------- */
+  .page { display: none; }
+  .page.active { display: block; }
+  .back-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .back-row span.b { font-size: 20px; cursor: pointer; }
+  .back-row h2 { font-size: 17px; }
+
+  table.data-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.data-tbl th, table.data-tbl td { border: 1px solid #e2e2e2; padding: 6px 4px; text-align: center; }
+  table.data-tbl th { background: #f4f7f4; }
+  table.data-tbl input[type="text"] { width: 100%; border: 1px solid #ccc; border-radius: 4px; padding: 4px; font-size: 12.5px; text-align: center; }
+  table.data-tbl input[type="checkbox"] { width: 18px; height: 18px; }
+  .row-add {
+    margin-top: 8px; background: #eef3ee; border: 1px dashed #9bb89b; border-radius: 8px;
+    padding: 8px; text-align: center; font-size: 13px; cursor: pointer; color: #146c34;
+  }
+  .btn-del { background: #c0392b; color: #fff; font-size: 11px; padding: 4px 7px; border: none; border-radius: 4px; cursor: pointer; }
+  .status { font-size: 12px; color: #666; margin-top: 8px; text-align: center; }
+  .date-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .date-row input[type="date"] { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+  .simple-input-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .simple-input-row label { font-size: 13px; flex: 1; }
+  .simple-input-row input { width: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; text-align: center; }
+  .menu-list .menu-item {
+    display: flex; align-items: center; gap: 12px; padding: 14px 4px; border-bottom: 1px solid #f0f0f0;
+    font-size: 14px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <h1>🌿 Tea Estate Office</h1>
+  <p>অ্যাকাউন্টে লগইন করুন</p>
+  <input type="email" id="loginEmail" placeholder="ইমেইল">
+  <input type="password" id="loginPassword" placeholder="পাসওয়ার্ড">
+  <button class="primary-btn" onclick="doLogin()">লগইন</button>
+  <div class="error-msg" id="loginError"></div>
+</div>
+
+<!-- APP -->
+<div id="appScreen">
+  <header>
+    <div class="brand">🍃 Tea Estate Office</div>
+    <div class="icons">
+      <div class="icon-btn">🔔<span class="badge-dot" id="taskBadge">0</span></div>
+      <div class="avatar" id="avatarInit">N</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- DASHBOARD PAGE -->
+    <div class="page active" id="page-dashboard">
+      <div class="welcome-card">
+        <div>
+          <h2>Welcome, <span id="userName">Numan</span></h2>
+          <p>Assistant Manager</p>
+          <p>Lallakhal Tea Estate</p>
+        </div>
+      </div>
+
+      <div class="date-row">
+        <label style="font-size:13px;">তারিখ:</label>
+        <input type="date" id="dashDate">
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card c-green" onclick="goPage('greenleaf')">
+          <div class="top-row"><div class="stat-icon">🍃</div></div>
+          <div class="label">Green Leaf Collection</div>
+          <div class="value" id="statGreenLeaf">0 kg</div>
+          <div class="sub">আজকের মোট</div>
+        </div>
+        <div class="stat-card c-blue" onclick="goPage('labour')">
+          <div class="top-row"><div class="stat-icon">👥</div></div>
+          <div class="label">Labour Attendance</div>
+          <div class="value" id="statLabour">0</div>
+          <div class="sub">আজ উপস্থিত</div>
+        </div>
+        <div class="stat-card c-purple" onclick="goPage('spray')">
+          <div class="top-row"><div class="stat-icon">🧴</div></div>
+          <div class="label">Spray Register</div>
+          <div class="value" id="statSpray">0</div>
+          <div class="sub">সেকশন স্প্রে হয়েছে</div>
+        </div>
+        <div class="stat-card c-yellow" onclick="goPage('nursery')">
+          <div class="top-row"><div class="stat-icon">🌱</div></div>
+          <div class="label">Nursery</div>
+          <div class="value" id="statNursery">0</div>
+          <div class="sub">Plants in Nursery</div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head">
+          <h3>📋 Today's Tasks</h3>
+          <a onclick="goPage('greenleaf')">View All</a>
+        </div>
+        <div id="taskList"><div class="empty-note">লোড হচ্ছে...</div></div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h3>📊 Recent Reports</h3></div>
+        <div class="report-grid">
+          <div class="report-btn rb1" onclick="showReport('daily')">📅<br>Daily Report</div>
+          <div class="report-btn rb2" onclick="showReport('weekly')">📅<br>Weekly Report</div>
+          <div class="report-btn rb3" onclick="showReport('monthly')">📅<br>Monthly Report</div>
+          <div class="report-btn rb4" onclick="showReport('custom')">📄<br>Custom Report</div>
+        </div>
+        <div id="reportOutput"></div>
+      </div>
+    </div>
+
+    <!-- GREEN LEAF (Plucking) PAGE -->
+    <div class="page" id="page-greenleaf">
+      <div class="back-row"><span class="b" onclick="goPage('dashboard')">←</span><h2>🍃 Green Leaf Collection</h2></div>
+      <table class="data-tbl">
+        <thead><tr><th>সেকশন</th><th>প্রজেক্টেড এরিয়া</th><th>একচুয়াল এরিয়া</th><th>গ্রিন লিফ (kg)</th><th>Done</th><th></th></tr></thead>
+        <tbody id="plucking-body"></tbody>
+      </table>
+      <div class="row-add" data-panel="plucking">+ নতুন সেকশন যোগ করুন</div>
+      <button class="primary-btn" style="margin-top:12px;" onclick="saveDay()">💾 সেভ করুন</button>
+      <div class="status" id="statusMsg1"></div>
+    </div>
+
+    <!-- SPRAY PAGE -->
+    <div class="page" id="page-spray">
+      <div class="back-row"><span class="b" onclick="goPage('dashboard')">←</span><h2>🧴 Spray Register</h2></div>
+      <table class="data-tbl">
+        <thead><tr><th>সেকশন</th><th>এরিয়া</th><th>প্রুনিং</th><th>কেমিক্যাল</th><th>রাউন্ড</th><th>Done</th><th></th></tr></thead>
+        <tbody id="foliar-body"></tbody>
+      </table>
+      <div class="row-add" data-panel="foliar">+ নতুন সেকশন যোগ করুন</div>
+      <button class="primary-btn" style="margin-top:12px;" onclick="saveDay()">💾 সেভ করুন</button>
+      <div class="status" id="statusMsg2"></div>
+    </div>
+
+    <!-- LABOUR PAGE -->
+    <div class="page" id="page-labour">
+      <div class="back-row"><span class="b" onclick="goPage('dashboard')">←</span><h2>👥 Labour Attendance</h2></div>
+      <div class="section-card">
+        <div class="simple-input-row"><label>মোট শ্রমিক</label><input type="number" id="labourTotal"></div>
+        <div class="simple-input-row"><label>আজ উপস্থিত</label><input type="number" id="labourPresent"></div>
+      </div>
+      <button class="primary-btn" onclick="saveDay()">💾 সেভ করুন</button>
+      <div class="status" id="statusMsg3"></div>
+    </div>
+
+    <!-- NURSERY PAGE -->
+    <div class="page" id="page-nursery">
+      <div class="back-row"><span class="b" onclick="goPage('dashboard')">←</span><h2>🌱 Nursery</h2></div>
+      <div class="section-card">
+        <div class="simple-input-row"><label>Plants in Nursery</label><input type="number" id="nurseryPlants"></div>
+      </div>
+      <button class="primary-btn" onclick="saveDay()">💾 সেভ করুন</button>
+      <div class="status" id="statusMsg4"></div>
+    </div>
+
+    <!-- MORE PAGE -->
+    <div class="page" id="page-more">
+      <div class="back-row"><span class="b" onclick="goPage('dashboard')">←</span><h2>☰ More</h2></div>
+      <div class="section-card menu-list">
+        <div class="menu-item" onclick="goPage('fertilizer')">🧪 সার প্রয়োগ (COC/MOP)</div>
+        <div class="menu-item" onclick="doLogout()">🚪 লগআউট</div>
+      </div>
+    </div>
+
+    <!-- FERTILIZER PAGE -->
+    <div class="page" id="page-fertilizer">
+      <div class="back-row"><span class="b" onclick="goPage('more')">←</span><h2>🧪 সার প্রয়োগ</h2></div>
+      <table class="data-tbl">
+        <thead><tr><th>সেকশন</th><th>এরিয়া (হেক্টর)</th><th>ড্রাম দরকার</th><th>Done</th><th></th></tr></thead>
+        <tbody id="fertilizer-body"></tbody>
+      </table>
+      <div class="row-add" data-panel="fertilizer">+ নতুন সেকশন যোগ করুন</div>
+      <button class="primary-btn" style="margin-top:12px;" onclick="saveDay()">💾 সেভ করুন</button>
+      <div class="status" id="statusMsg5"></div>
+    </div>
+  </main>
+
+  <nav class="bottom">
+    <div class="nav-item active" data-nav="dashboard" onclick="goPage('dashboard')"><span class="ic">🏠</span>Dashboard</div>
+    <div class="nav-item" data-nav="labour" onclick="goPage('labour')"><span class="ic">👥</span>Labour</div>
+    <div class="nav-item" data-nav="greenleaf" onclick="goPage('greenleaf')"><span class="ic">🍃</span>Green Leaf</div>
+    <div class="nav-item" data-nav="spray" onclick="goPage('spray')"><span class="ic">🧴</span>Spray</div>
+    <div class="nav-item" data-nav="more" onclick="goPage('more')"><span class="ic">☰</span>More</div>
+  </nav>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDqcotAS8uGUddM4dN7HVjJLYJskaGBdpk",
+  authDomain: "tea-estate-office-management.firebaseapp.com",
+  projectId: "tea-estate-office-management",
+  storageBucket: "tea-estate-office-management.firebasestorage.app",
+  messagingSenderId: "648209804032",
+  appId: "1:648209804032:web:3b2b06be32bbaa0ab261e5"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+let currentUser = null;
+
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  if (user) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appScreen').style.display = 'block';
+    const namePart = (user.email || 'User').split('@')[0];
+    document.getElementById('userName').textContent = namePart;
+    document.getElementById('avatarInit').textContent = namePart.charAt(0).toUpperCase();
+    document.getElementById('dashDate').value = todayStr();
+    loadDay(todayStr());
+  } else {
+    document.getElementById('loginScreen').style.display = 'block';
+    document.getElementById('appScreen').style.display = 'none';
+  }
+});
+
+function doLogin() {
+  const email = document.getElementById('loginEmail').value;
+  const pass = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  auth.signInWithEmailAndPassword(email, pass).catch(err => { errEl.textContent = 'লগইন ব্যর্থ: ' + err.message; });
+}
+function doLogout() { auth.signOut(); }
+
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+function goPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navEl = document.querySelector('.nav-item[data-nav="' + name + '"]');
+  if (navEl) navEl.classList.add('active');
+  window.scrollTo(0,0);
+}
+
+const panels = {
+  plucking: { cols: ['section','projArea','actArea','greenLeaf'], placeholders: ['সেকশন','','',''] },
+  fertilizer: { cols: ['section','area','drums'], placeholders: ['সেকশন','',''] },
+  foliar: { cols: ['section','area','pruningType','chemical','round'], placeholders: ['সেকশন','','','',''] }
+};
+let currentData = { plucking: [], fertilizer: [], foliar: [], labour: { total: '', present: '' }, nursery: { plants: '' } };
+
+function renderPanel(type) {
+  const body = document.getElementById(type + '-body');
+  if (!body) return;
+  body.innerHTML = '';
+  const cfg = panels[type];
+  (currentData[type] || []).forEach((row, idx) => {
+    const tr = document.createElement('tr');
+    let html = '';
+    cfg.cols.forEach((col, ci) => {
+      html += `<td><input type="text" value="${row[col] || ''}" oninput="updateCell('${type}',${idx},'${col}',this.value)" placeholder="${cfg.placeholders[ci]}"></td>`;
+    });
+    html += `<td><input type="checkbox" ${row.done ? 'checked' : ''} onchange="updateCell('${type}',${idx},'done',this.checked); refreshDashboard();"></td>`;
+    html += `<td><button class="btn-del" onclick="removeRow('${type}',${idx})">✕</button></td>`;
+    tr.innerHTML = html;
+    body.appendChild(tr);
+  });
+}
+function updateCell(type, idx, col, val) { currentData[type][idx][col] = val; }
+function removeRow(type, idx) { currentData[type].splice(idx,1); renderPanel(type); refreshDashboard(); }
+
+document.querySelectorAll('.row-add').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const type = btn.dataset.panel;
+    const row = {}; panels[type].cols.forEach(c => row[c] = ''); row.done = false;
+    currentData[type].push(row);
+    renderPanel(type);
+  });
+});
+
+function renderAll() {
+  Object.keys(panels).forEach(renderPanel);
+  document.getElementById('labourTotal').value = (currentData.labour && currentData.labour.total) || '';
+  document.getElementById('labourPresent').value = (currentData.labour && currentData.labour.present) || '';
+  document.getElementById('nurseryPlants').value = (currentData.nursery && currentData.nursery.plants) || '';
+  refreshDashboard();
+}
+
+async function loadDay(dateStr) {
+  if (!currentUser) return;
+  try {
+    const doc = await db.collection('users').doc(currentUser.uid).collection('dailyWork').doc(dateStr).get();
+    currentData = doc.exists ? doc.data() : { plucking: [], fertilizer: [], foliar: [], labour: {total:'',present:''}, nursery:{plants:''} };
+    if (!currentData.labour) currentData.labour = { total:'', present:'' };
+    if (!currentData.nursery) currentData.nursery = { plants:'' };
+    if (!currentData.plucking) currentData.plucking = [];
+    if (!currentData.fertilizer) currentData.fertilizer = [];
+    if (!currentData.foliar) currentData.foliar = [];
+  } catch (e) {
+    currentData = { plucking: [], fertilizer: [], foliar: [], labour: {total:'',present:''}, nursery:{plants:''} };
+  }
+  renderAll();
+}
+
+async function saveDay() {
+  if (!currentUser) return;
+  currentData.labour = { total: document.getElementById('labourTotal').value, present: document.getElementById('labourPresent').value };
+  currentData.nursery = { plants: document.getElementById('nurseryPlants').value };
+  const dateStr = document.getElementById('dashDate').value || todayStr();
+  try {
+    await db.collection('users').doc(currentUser.uid).collection('dailyWork').doc(dateStr).set(currentData);
+    ['statusMsg1','statusMsg2','statusMsg3','statusMsg4','statusMsg5'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '✓ সেভ হয়েছে — ' + dateStr;
+    });
+    refreshDashboard();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function refreshDashboard() {
+  const greenLeafTotal = (currentData.plucking || []).reduce((s,r) => s + (parseFloat(r.greenLeaf) || 0), 0);
+  document.getElementById('statGreenLeaf').textContent = greenLeafTotal + ' kg';
+  document.getElementById('statLabour').textContent = (currentData.labour && currentData.labour.present) || 0;
+  const sprayDone = (currentData.foliar || []).filter(r => r.done).length;
+  document.getElementById('statSpray').textContent = sprayDone;
+  document.getElementById('statNursery').textContent = (currentData.nursery && currentData.nursery.plants) || 0;
+
+  const pending = [];
+  (currentData.plucking || []).forEach(r => { if (!r.done && r.section) pending.push({icon:'🍃', t1: r.section + ' — Green Leaf', t2: 'Weighment and Entry'}); });
+  (currentData.foliar || []).forEach(r => { if (!r.done && r.section) pending.push({icon:'🧴', t1: 'Spray ' + r.section, t2: r.chemical || ''}); });
+  (currentData.fertilizer || []).forEach(r => { if (!r.done && r.section) pending.push({icon:'🧪', t1: 'সার প্রয়োগ ' + r.section, t2: ''}); });
+
+  const listEl = document.getElementById('taskList');
+  document.getElementById('taskBadge').textContent = pending.length;
+  if (pending.length === 0) {
+    listEl.innerHTML = '<div class="empty-note">আজকের সব কাজ সম্পন্ন ✓</div>';
+  } else {
+    listEl.innerHTML = pending.slice(0,5).map(p => `
+      <div class="task-row">
+        <div class="task-icon">${p.icon}</div>
+        <div class="task-text"><div class="t1">${p.t1}</div><div class="t2">${p.t2}</div></div>
+        <div class="pill">Pending</div>
+      </div>`).join('');
+  }
+}
+
+document.getElementById('dashDate').addEventListener('change', e => loadDay(e.target.value));
+
+async function showReport(type) {
+  const out = document.getElementById('reportOutput');
+  out.innerHTML = '<div class="empty-note">লোড হচ্ছে...</div>';
+  let days = 1;
+  if (type === 'weekly') days = 7;
+  if (type === 'monthly') days = 30;
+  if (type === 'custom') { out.innerHTML = '<div class="empty-note">তারিখ পরিসীমা নির্বাচন করে দেখুন — শীঘ্রই আসছে</div>'; return; }
+  const end = new Date();
+  const start = new Date(); start.setDate(end.getDate() - (days - 1));
+  const startStr = start.toISOString().split('T')[0];
+  const endStr = end.toISOString().split('T')[0];
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid).collection('dailyWork')
+      .where(firebase.firestore.FieldPath.documentId(), '>=', startStr)
+      .where(firebase.firestore.FieldPath.documentId(), '<=', endStr).get();
+    let totalGL = 0, totalSprayDone = 0, daysCount = 0;
+    snap.forEach(doc => {
+      daysCount++;
+      const d = doc.data();
+      (d.plucking||[]).forEach(r => totalGL += (parseFloat(r.greenLeaf)||0));
+      (d.foliar||[]).forEach(r => { if (r.done) totalSprayDone++; });
+    });
+    out.innerHTML = `<div class="section-card" style="margin-top:10px;">
+      <div style="font-size:13px;">📅 ${startStr} → ${endStr}</div>
+      <div style="font-size:13px;margin-top:6px;">মোট গ্রিন লিফ: <b>${totalGL} kg</b></div>
+      <div style="font-size:13px;">মোট স্প্রে সম্পন্ন: <b>${totalSprayDone}</b></div>
+      <div style="font-size:13px;">রেকর্ড থাকা দিন: <b>${daysCount}</b></div>
+    </div>`;
+  } catch (e) {
+    out.innerHTML = '<div class="empty-note">রিপোর্ট লোড করতে সমস্যা হয়েছে</div>';
+  }
+}
+</script>
+
+</body>
+</html>
