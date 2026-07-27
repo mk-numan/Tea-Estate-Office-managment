@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tea Estate Office</title>
+
+<!-- React (via CDN — no build step needed) -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans Bengali', 'Hind Siliguri', -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: #f2f5f2;
+    color: #1c2b1c;
+    padding-bottom: 76px;
+  }
+  #loginScreen {
+    max-width: 360px; margin: 80px auto; background: #fff; border-radius: 16px;
+    padding: 28px 22px; box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+  }
+  #loginScreen h1 { font-size: 22px; color: #146c34; margin-bottom: 4px; }
+  #loginScreen p { font-size: 13px; color: #666; margin-bottom: 18px; }
+  #loginScreen input { width: 100%; padding: 11px; border: 1px solid #d7ddd7; border-radius: 8px; font-size: 15px; margin-bottom: 10px; }
+  .primary-btn { width: 100%; padding: 12px; background: #146c34; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .error-msg { color: #c0392b; font-size: 13px; text-align: center; margin-top: 8px; }
+  header {
+    background: linear-gradient(135deg, #146c34, #1c8a43); color: #fff; padding: 16px 18px;
+    display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10;
+  }
+  header .brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; }
+  header .icons { display: flex; align-items: center; gap: 16px; }
+  .icon-btn { position: relative; font-size: 20px; cursor: pointer; }
+  .badge-dot { position: absolute; top: -6px; right: -8px; background: #e74c3c; color: #fff; font-size: 10px; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #fff; color: #146c34; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+  main { padding: 14px; max-width: 480px; margin: 0 auto; }
+  .welcome-card { background: #fff; border-radius: 14px; padding: 18px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); position: relative; overflow: hidden; }
+  .welcome-card::after { content: "🍃"; position: absolute; right: 10px; bottom: -10px; font-size: 70px; opacity: 0.12; }
+  .welcome-card h2 { font-size: 19px; }
+  .welcome-card h2 span { color: #146c34; }
+  .welcome-card p { font-size: 13px; color: #666; margin-top: 2px; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .stat-card { border-radius: 14px; padding: 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; }
+  .stat-icon { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .stat-card .label { font-size: 12.5px; color: #444; font-weight: 600; }
+  .stat-card .value { font-size: 22px; font-weight: 700; }
+  .stat-card .sub { font-size: 11.5px; color: #777; }
+  .c-green { background: #e8f6ec; } .c-green .stat-icon { background: #c6ecd2; }
+  .c-blue { background: #e9f2fb; } .c-blue .stat-icon { background: #cde3f7; }
+  .c-purple { background: #f2ecfb; } .c-purple .stat-icon { background: #ddccf5; }
+  .c-yellow { background: #fbf3e3; } .c-yellow .stat-icon { background: #f3e0ac; }
+  .section-card { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .section-head h3 { font-size: 15px; display: flex; align-items: center; gap: 6px; }
+  .section-head a { font-size: 12.5px; color: #146c34; font-weight: 600; cursor: pointer; }
+  .task-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #f0f0f0; }
+  .task-row:last-child { border-bottom: none; }
+  .task-icon { width: 32px; height: 32px; border-radius: 8px; background: #eef6ee; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+  .task-text { flex: 1; }
+  .task-text .t1 { font-size: 13.5px; font-weight: 600; }
+  .task-text .t2 { font-size: 11.5px; color: #888; }
+  .pill { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid #ccc; color: #777; }
+  .empty-note { font-size: 13px; color: #999; text-align: center; padding: 12px 0; }
+  .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .report-btn { border-radius: 12px; padding: 16px 8px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; }
+  .rb1 { background: #fdece0; color: #b5560f; } .rb2 { background: #e6f0fb; color: #1d5fa3; }
+  .rb3 { background: #f0e8fb; color: #6a34b0; } .rb4 { background: #e6f3ea; color: #1d7a3d; }
+  nav.bottom { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around; padding: 8px 0 10px; z-index: 10; }
+  nav.bottom .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: #888; cursor: pointer; flex: 1; }
+  nav.bottom .nav-item.active { color: #146c34; font-weight: 700; }
+  nav.bottom .nav-item .ic { font-size: 19px; }
+  .back-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .back-row span.b { font-size: 20px; cursor: pointer; }
+  .back-row h2 { font-size: 17px; }
+  table.data-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.data-tbl th, table.data-tbl td { border: 1px solid #e2e2e2; padding: 6px 4px; text-align: center; }
+  table.data-tbl th { background: #f4f7f4; font-size: 11.5px; white-space: nowrap; }
+  table.data-tbl input[type="text"] { width: 60px; border: 1px solid #ccc; border-radius: 4px; padding: 4px; font-size: 12.5px; text-align: center; }
+  #plucking-table input[type="text"] { width: 55px; }
+  table.data-tbl input[type="checkbox"] { width: 18px; height: 18px; }
+  .row-add { margin-top: 8px; background: #eef3ee; border: 1px dashed #9bb89b; border-radius: 8px; padding: 8px; text-align: center; font-size: 13px; cursor: pointer; color: #146c34; }
+  .btn-del { background: #c0392b; color: #fff; font-size: 11px; padding: 4px 7px; border: none; border-radius: 4px; cursor: pointer; }
+  .status { font-size: 12px; color: #666; margin-top: 8px; text-align: center; }
+  .date-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .date-row input[type="date"] { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+  .simple-input-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .simple-input-row label { font-size: 13px; flex: 1; }
+  .simple-input-row input { width: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; text-align: center; }
+  .menu-list .menu-item { display: flex; align-items: center; gap: 12px; padding: 14px 4px; border-bottom: 1px solid #f0f0f0; font-size: 14px; cursor: pointer; }
+  #printArea { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 10px; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDqcotAS8uGUddM4dN7HVjJLYJskaGBdpk",
+  authDomain: "tea-estate-office-management.firebaseapp.com",
+  projectId: "tea-estate-office-management",
+  storageBucket: "tea-estate-office-management.firebasestorage.app",
+  messagingSenderId: "648209804032",
+  appId: "1:648209804032:web:3b2b06be32bbaa0ab261e5"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+</script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo } = React;
+
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function num(v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+const emptyDay = () => ({ plucking: [], fertilizer: [], foliar: [], labour: { total:'', present:'' }, nursery: { plants:'' } });
+
+const pluckingCols = ['atwork','projArea','actArea','tippingPluckers','taskPluckers','bela1','bela2','bela3','glTipping','glCash','glTask','expPC1','expPC9'];
+const panelDefs = {
+  fertilizer: { cols: ['sectionNo','area','pruningType','urea','dap','mop','splitNo','date'], placeholders: ['সেকশন নং','','','','','','','YYYY-MM-DD'] },
+  foliar: { cols: ['pestDisease','sectionNo','area','pruningType','chemical','acresApplied','date','repeatDate','remarks'], placeholders: ['পেস্ট/ডিজিজ','সেকশন নং','','','','','YYYY-MM-DD','YYYY-MM-DD',''] }
+};
+
+function LoginScreen({ onError, error }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const doLogin = () => {
+    onError('');
+    auth.signInWithEmailAndPassword(email, password).catch(err => onError('লগইন ব্যর্থ: ' + err.message));
+  };
+  return (
+    <div id="loginScreen">
+      <h1>🌿 Tea Estate Office</h1>
+      <p>অ্যাকাউন্টে লগইন করুন</p>
+      <input type="email" placeholder="ইমেইল" value={email} onChange={e => setEmail(e.target.value)} />
+      <input type="password" placeholder="পাসওয়ার্ড" value={password} onChange={e => setPassword(e.target.value)} />
+      <button className="primary-btn" onClick={doLogin}>লগইন</button>
+      <div className="error-msg">{error}</div>
+    </div>
+  );
+}
+
+function GenericTable({ type, data, setData }) {
+  const cfg = panelDefs[type];
+  const updateCell = (idx, col, val) => {
+    const arr = [...data];
+    arr[idx] = { ...arr[idx], [col]: val };
+    setData(arr);
+  };
+  const removeRow = (idx) => setData(data.filter((_, i) => i !== idx));
+  const addRow = () => {
+    const row = {}; cfg.cols.forEach(c => row[c] = ''); row.done = false;
+    setData([...data, row]);
+  };
+  return (
+    <React.Fragment>
+      <div style={{overflowX:'auto'}}>
+      <table className="data-tbl" style={{minWidth: type === 'foliar' ? 900 : 820}}>
+        <thead><tr>
+          {cfg.cols.map((c,i) => <th key={c}>{cfg.headers[i]}</th>)}
+          <th>Done</th><th></th>
+        </tr></thead>
+        <tbody>
+          {data.map((row, idx) => (
+            <tr key={idx}>
+              {cfg.cols.map((col, ci) => (
+                <td key={col}><input type="text" value={row[col]||''} placeholder={cfg.placeholders[ci]}
+                  onChange={e => updateCell(idx, col, e.target.value)} /></td>
+              ))}
+              <td><input type="checkbox" checked={!!row.done} onChange={e => updateCell(idx,'done',e.target.checked)} /></td>
+              <td><button className="btn-del" onClick={() => removeRow(idx)}>✕</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      </div>
+      <div className="row-add" onClick={addRow}>+ নতুন সেকশন যোগ করুন</div>
+    </React.Fragment>
+  );
+}
+panelDefs.fertilizer.headers = ['সেকশন নং','এরিয়া','প্রুনিং টাইপ','ইউরিয়া','DAP','MOP','স্প্লিট নং','তারিখ'];
+panelDefs.foliar.headers = ['Pest/Disease','সেকশন নং','এরিয়া','প্রুনিং টাইপ','কেমিক্যাল নাম','একর প্রয়োগ','তারিখ','রিপিট তারিখ','রিমার্কস'];
+
+function PluckingTable({ data, setData, onChange }) {
+  const updateCell = (idx, col, val) => {
+    const arr = [...data];
+    arr[idx] = { ...arr[idx], [col]: val };
+    setData(arr);
+  };
+  const removeRow = (idx) => setData(data.filter((_, i) => i !== idx));
+  const addRow = () => {
+    const row = {}; pluckingCols.forEach(c => row[c] = ''); row.done = false;
+    setData([...data, row]);
+  };
+  return (
+    <React.Fragment>
+      <div style={{overflowX:'auto'}}>
+      <table className="data-tbl" id="plucking-table" style={{minWidth:1180}}>
+        <thead>
+          <tr>
+            <th rowSpan="2">Atwork</th>
+            <th rowSpan="2">Projected<br/>Area (Ha)</th>
+            <th rowSpan="2">Actual Area<br/>Plucked (Ha)</th>
+            <th colSpan="3">Deployment Plucker & %</th>
+            <th colSpan="3">Bela-wise Pluckers</th>
+            <th colSpan="4">Green leaf Qty. (Kg)</th>
+            <th colSpan="2">Average Kg.</th>
+            <th colSpan="3">Today's Expenditure</th>
+            <th rowSpan="2">Avg Cost<br/>/kg (GL)</th>
+            <th rowSpan="2">Done</th>
+            <th rowSpan="2"></th>
+          </tr>
+          <tr>
+            <th>Tipping</th><th>Task</th><th>Total</th>
+            <th>Bela-1</th><th>Bela-2</th><th>Bela-3</th>
+            <th>Tipping</th><th>Cash</th><th>Task</th><th>Total</th>
+            <th>Tipping</th><th>Task</th>
+            <th>PC.1</th><th>PC.9</th><th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, idx) => {
+            const tipP = num(row.tippingPluckers), taskP = num(row.taskPluckers);
+            const totalP = tipP + taskP;
+            const glTip = num(row.glTipping), glCash = num(row.glCash), glTask = num(row.glTask);
+            const glTotal = glTip + glCash + glTask;
+            const avgTip = tipP ? (glTip/tipP).toFixed(1) : '0.0';
+            const avgTask = taskP ? (glTask/taskP).toFixed(1) : '0.0';
+            const pc1 = num(row.expPC1), pc9 = num(row.expPC9);
+            const expTotal = pc1 + pc9;
+            const avgCost = glTotal ? (expTotal/glTotal).toFixed(2) : '0.00';
+            const inp = (col, ph) => <input type="text" value={row[col]||''} placeholder={ph||''}
+              onChange={e => updateCell(idx, col, e.target.value)} />;
+            return (
+              <tr key={idx}>
+                <td>{inp('atwork','নাম')}</td>
+                <td>{inp('projArea')}</td>
+                <td>{inp('actArea')}</td>
+                <td>{inp('tippingPluckers')}</td>
+                <td>{inp('taskPluckers')}</td>
+                <td style={{background:'#f7f9f7'}}>{totalP}</td>
+                <td>{inp('bela1')}</td>
+                <td>{inp('bela2')}</td>
+                <td>{inp('bela3')}</td>
+                <td>{inp('glTipping')}</td>
+                <td>{inp('glCash')}</td>
+                <td>{inp('glTask')}</td>
+                <td style={{background:'#f7f9f7'}}>{glTotal}</td>
+                <td style={{background:'#f7f9f7'}}>{avgTip}</td>
+                <td style={{background:'#f7f9f7'}}>{avgTask}</td>
+                <td>{inp('expPC1')}</td>
+                <td>{inp('expPC9')}</td>
+                <td style={{background:'#f7f9f7'}}>{expTotal}</td>
+                <td style={{background:'#f7f9f7'}}>{avgCost}</td>
+                <td><input type="checkbox" checked={!!row.done} onChange={e => updateCell(idx,'done',e.target.checked)} /></td>
+                <td><button className="btn-del" onClick={() => removeRow(idx)}>✕</button></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      </div>
+      <div className="row-add" onClick={addRow}>+ নতুন Atwork যোগ করুন</div>
+    </React.Fragment>
+  );
+}
+
+function App() {
+  const [user, setUser] = useState(null);
+  const [loginError, setLoginError] = useState('');
+  const [page, setPage] = useState('dashboard');
+  const [dashDate, setDashDate] = useState(todayStr());
+  const [dayData, setDayData] = useState(emptyDay());
+  const [saveStatus, setSaveStatus] = useState('');
+  const [reportRows, setReportRows] = useState([]);
+  const [reportMeta, setReportMeta] = useState({ type:'daily', startStr:'', endStr:'' });
+  const [reportLoading, setReportLoading] = useState(false);
+
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(u => setUser(u));
+    return unsub;
+  }, []);
+
+  useEffect(() => { if (user) loadDay(dashDate); }, [user, dashDate]);
+
+  const loadDay = async (dateStr) => {
+    if (!user) return;
+    try {
+      const doc = await db.collection('users').doc(user.uid).collection('dailyWork').doc(dateStr).get();
+      const d = doc.exists ? doc.data() : emptyDay();
+      setDayData({
+        plucking: d.plucking || [], fertilizer: d.fertilizer || [], foliar: d.foliar || [],
+        labour: d.labour || { total:'', present:'' }, nursery: d.nursery || { plants:'' }
+      });
+    } catch (e) { setDayData(emptyDay()); }
+  };
+
+  const saveDay = async () => {
+    if (!user) return;
+    try {
+      await db.collection('users').doc(user.uid).collection('dailyWork').doc(dashDate).set(dayData);
+      setSaveStatus('✓ সেভ হয়েছে — ' + dashDate);
+    } catch (e) { setSaveStatus('✗ সেভ ব্যর্থ: ' + e.message); }
+  };
+
+  const greenLeafTotal = useMemo(() =>
+    dayData.plucking.reduce((s,r) => s + num(r.glTipping) + num(r.glCash) + num(r.glTask), 0),
+    [dayData.plucking]);
+  const sprayDoneCount = useMemo(() => dayData.foliar.filter(r => r.done).length, [dayData.foliar]);
+
+  const pendingTasks = useMemo(() => {
+    const p = [];
+    dayData.plucking.forEach(r => { if (!r.done && r.atwork) p.push({icon:'🍃', t1: r.atwork + ' — Green Leaf', t2:'Weighment and Entry'}); });
+    dayData.foliar.forEach(r => { if (!r.done && r.sectionNo) p.push({icon:'🧴', t1:'Spray সেকশন ' + r.sectionNo, t2: r.chemical||''}); });
+    dayData.fertilizer.forEach(r => { if (!r.done && r.sectionNo) p.push({icon:'🧪', t1:'সার প্রয়োগ সেকশন ' + r.sectionNo, t2:''}); });
+    return p;
+  }, [dayData]);
+
+  const showReport = async (type) => {
+    setReportLoading(true);
+    let days = 1;
+    if (type === 'weekly') days = 7;
+    if (type === 'monthly') days = 30;
+    if (type === 'custom') { setReportLoading(false); setReportRows(null); return; }
+    const end = new Date(); const start = new Date(); start.setDate(end.getDate() - (days-1));
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    try {
+      const snap = await db.collection('users').doc(user.uid).collection('dailyWork')
+        .where(firebase.firestore.FieldPath.documentId(), '>=', startStr)
+        .where(firebase.firestore.FieldPath.documentId(), '<=', endStr).get();
+      const rows = [];
+      snap.forEach(doc => {
+        const d = doc.data();
+        let gl = 0;
+        (d.plucking||[]).forEach(r => gl += num(r.glTipping)+num(r.glCash)+num(r.glTask));
+        const sprayDone = (d.foliar||[]).filter(r=>r.done).length;
+        const fertDone = (d.fertilizer||[]).filter(r=>r.done).length;
+        const present = (d.labour && d.labour.present) ? num(d.labour.present) : 0;
+        rows.push({ date: doc.id, gl, sprayDone, fertDone, present, raw: d });
+      });
+      rows.sort((a,b) => a.date < b.date ? -1 : 1);
+      setReportRows(rows);
+      setReportMeta({ type, startStr, endStr });
+    } catch (e) { setReportRows([]); }
+    setReportLoading(false);
+  };
+
+  const printReport = () => {
+    const el = document.getElementById('printArea');
+    const titleMap = { daily:'Daily Report', weekly:'Weekly Report', monthly:'Monthly Report' };
+    let html = `<h2>LKL Tea Estate — ${titleMap[reportMeta.type]||'Report'}</h2>
+      <div style="font-size:13px;margin-bottom:10px;">সময়কাল: ${reportMeta.startStr} → ${reportMeta.endStr}</div>`;
+    if (reportMeta.type === 'daily' && reportRows.length) {
+      const d = reportRows[0].raw;
+      html += `<h3>🍃 Green Leaf — Atwork-wise</h3>
+        <table border="1" cellpadding="4" style="border-collapse:collapse;width:100%;font-size:11px;">
+        <tr><th>Atwork</th><th>Proj Area</th><th>Actual Area</th><th>Tipping Pl.</th><th>Task Pl.</th><th>Bela1</th><th>Bela2</th><th>Bela3</th><th>GL Tipping</th><th>GL Cash</th><th>GL Task</th><th>GL Total</th><th>PC.1</th><th>PC.9</th></tr>
+        ${(d.plucking||[]).map(r => `<tr><td>${r.atwork||''}</td><td>${r.projArea||''}</td><td>${r.actArea||''}</td><td>${r.tippingPluckers||''}</td><td>${r.taskPluckers||''}</td><td>${r.bela1||''}</td><td>${r.bela2||''}</td><td>${r.bela3||''}</td><td>${r.glTipping||''}</td><td>${r.glCash||''}</td><td>${r.glTask||''}</td><td>${num(r.glTipping)+num(r.glCash)+num(r.glTask)}</td><td>${r.expPC1||''}</td><td>${r.expPC9||''}</td></tr>`).join('') || '<tr><td colspan="14">কোনো এন্ট্রি নেই</td></tr>'}
+        </table>
+        <h3 style="margin-top:14px;">🧴 Spray Register</h3>
+        <table border="1" cellpadding="4" style="border-collapse:collapse;width:100%;font-size:11px;">
+        <tr><th>Pest/Disease</th><th>Section</th><th>Area</th><th>Pruning</th><th>Chemical</th><th>Acres</th><th>Date</th><th>Repeat Date</th><th>Remarks</th></tr>
+        ${(d.foliar||[]).map(r => `<tr><td>${r.pestDisease||''}</td><td>${r.sectionNo||''}</td><td>${r.area||''}</td><td>${r.pruningType||''}</td><td>${r.chemical||''}</td><td>${r.acresApplied||''}</td><td>${r.date||''}</td><td>${r.repeatDate||''}</td><td>${r.remarks||''}</td></tr>`).join('') || '<tr><td colspan="9">কোনো এন্ট্রি নেই</td></tr>'}
+        </table>
+        <h3 style="margin-top:14px;">🧪 সার প্রয়োগ</h3>
+        <table border="1" cellpadding="4" style="border-collapse:collapse;width:100%;font-size:11px;">
+        <tr><th>Section</th><th>Area</th><th>Pruning</th><th>Urea</th><th>DAP</th><th>MOP</th><th>Split No</th><th>Date</th></tr>
+        ${(d.fertilizer||[]).map(r => `<tr><td>${r.sectionNo||''}</td><td>${r.area||''}</td><td>${r.pruningType||''}</td><td>${r.urea||''}</td><td>${r.dap||''}</td><td>${r.mop||''}</td><td>${r.splitNo||''}</td><td>${r.date||''}</td></tr>`).join('') || '<tr><td colspan="8">কোনো এন্ট্রি নেই</td></tr>'}
+        </table>`;
+    } else {
+      const rows = reportRows || [];
+      html += `<table border="1" cellpadding="4" style="border-collapse:collapse;width:100%;font-size:12px;">
+        <tr><th>তারিখ</th><th>GL (kg)</th><th>Spray Done</th><th>Fert. Done</th><th>Labour Present</th></tr>
+        ${rows.map(r => `<tr><td>${r.date}</td><td>${r.gl}</td><td>${r.sprayDone}</td><td>${r.fertDone}</td><td>${r.present}</td></tr>`).join('') || '<tr><td colspan="5">কোনো রেকর্ড নেই</td></tr>'}
+        <tr style="font-weight:bold;"><td>মোট</td><td>${rows.reduce((s,r)=>s+r.gl,0)}</td><td>${rows.reduce((s,r)=>s+r.sprayDone,0)}</td><td>${rows.reduce((s,r)=>s+r.fertDone,0)}</td><td>-</td></tr>
+        </table>`;
+    }
+    el.innerHTML = html;
+    window.print();
+  };
+
+  if (!user) return <LoginScreen error={loginError} onError={setLoginError} />;
+
+  const namePart = (user.email || 'User').split('@')[0];
+
+  return (
+    <div>
+      <header>
+        <div className="brand">🍃 Tea Estate Office</div>
+        <div className="icons">
+          <div className="icon-btn">🔔<span className="badge-dot">{pendingTasks.length}</span></div>
+          <div className="avatar">{namePart.charAt(0).toUpperCase()}</div>
+        </div>
+      </header>
+      <main>
+        {page === 'dashboard' && (
+          <div>
+            <div className="welcome-card">
+              <div>
+                <h2>Welcome, <span>{namePart}</span></h2>
+                <p>Assistant Manager</p>
+                <p>Lallakhal Tea Estate</p>
+              </div>
+            </div>
+            <div className="date-row">
+              <label style={{fontSize:13}}>তারিখ:</label>
+              <input type="date" value={dashDate} onChange={e => setDashDate(e.target.value)} />
+            </div>
+            <div className="stat-grid">
+              <div className="stat-card c-green" onClick={() => setPage('greenleaf')}>
+                <div className="stat-icon">🍃</div>
+                <div className="label">Green Leaf Collection</div>
+                <div className="value">{greenLeafTotal} kg</div>
+                <div className="sub">আজকের মোট</div>
+              </div>
+              <div className="stat-card c-blue" onClick={() => setPage('labour')}>
+                <div className="stat-icon">👥</div>
+                <div className="label">Labour Attendance</div>
+                <div className="value">{dayData.labour.present || 0}</div>
+                <div className="sub">আজ উপস্থিত</div>
+              </div>
+              <div className="stat-card c-purple" onClick={() => setPage('spray')}>
+                <div className="stat-icon">🧴</div>
+                <div className="label">Spray Register</div>
+                <div className="value">{sprayDoneCount}</div>
+                <div className="sub">সেকশন স্প্রে হয়েছে</div>
+              </div>
+              <div className="stat-card c-yellow" onClick={() => setPage('nursery')}>
+                <div className="stat-icon">🌱</div>
+                <div className="label">Nursery</div>
+                <div className="value">{dayData.nursery.plants || 0}</div>
+                <div className="sub">Plants in Nursery</div>
+              </div>
+            </div>
+            <div className="section-card">
+              <div className="section-head"><h3>📋 Today's Tasks</h3><a onClick={() => setPage('greenleaf')}>View All</a></div>
+              {pendingTasks.length === 0
+                ? <div className="empty-note">আজকের সব কাজ সম্পন্ন ✓</div>
+                : pendingTasks.slice(0,5).map((t,i) => (
+                  <div className="task-row" key={i}>
+                    <div className="task-icon">{t.icon}</div>
+                    <div className="task-text"><div className="t1">{t.t1}</div><div className="t2">{t.t2}</div></div>
+                    <div className="pill">Pending</div>
+                  </div>
+                ))}
+            </div>
+            <div className="section-card">
+              <div className="section-head"><h3>📊 Recent Reports</h3></div>
+              <div className="report-grid">
+                <div className="report-btn rb1" onClick={() => showReport('daily')}>📅<br/>Daily Report</div>
+                <div className="report-btn rb2" onClick={() => showReport('weekly')}>📅<br/>Weekly Report</div>
+                <div className="report-btn rb3" onClick={() => showReport('monthly')}>📅<br/>Monthly Report</div>
+                <div className="report-btn rb4" onClick={() => showReport('custom')}>📄<br/>Custom Report</div>
+              </div>
+              {reportLoading && <div className="empty-note">লোড হচ্ছে...</div>}
+              {reportRows !== null && reportRows !== undefined && !reportLoading && (
+                <div className="section-card" style={{marginTop:10}}>
+                  <div style={{fontSize:13}}>📅 {reportMeta.startStr} → {reportMeta.endStr}</div>
+                  <table className="data-tbl" style={{marginTop:8}}>
+                    <thead><tr><th>তারিখ</th><th>GL (kg)</th><th>Spray Done</th><th>Fert. Done</th><th>Labour</th></tr></thead>
+                    <tbody>
+                      {reportRows.length === 0
+                        ? <tr><td colSpan="5" style={{color:'#999'}}>কোনো রেকর্ড নেই</td></tr>
+                        : reportRows.map(r => <tr key={r.date}><td>{r.date}</td><td>{r.gl}</td><td>{r.sprayDone}</td><td>{r.fertDone}</td><td>{r.present}</td></tr>)}
+                    </tbody>
+                  </table>
+                  <button className="primary-btn" style={{marginTop:10}} onClick={printReport}>🖨️ PDF ডাউনলোড করুন</button>
+                </div>
+              )}
+              {reportRows === null && <div className="empty-note">তারিখ পরিসীমা নির্বাচন করে দেখুন — শীঘ্রই আসছে</div>}
+            </div>
+          </div>
+        )}
+
+        {page === 'greenleaf' && (
+          <div>
+            <div className="back-row"><span className="b" onClick={() => setPage('dashboard')}>←</span><h2>🍃 Daily Plucking Report — LKL</h2></div>
+            <PluckingTable data={dayData.plucking} setData={arr => setDayData({...dayData, plucking: arr})} />
+            <button className="primary-btn" style={{marginTop:12}} onClick={saveDay}>💾 সেভ করুন</button>
+            <div className="status">{saveStatus}</div>
+          </div>
+        )}
+
+        {page === 'spray' && (
+          <div>
+            <div className="back-row"><span className="b" onClick={() => setPage('dashboard')}>←</span><h2>🧴 Spray Register — LKL</h2></div>
+            <GenericTable type="foliar" data={dayData.foliar} setData={arr => setDayData({...dayData, foliar: arr})} />
+            <button className="primary-btn" style={{marginTop:12}} onClick={saveDay}>💾 সেভ করুন</button>
+            <div className="status">{saveStatus}</div>
+          </div>
+        )}
+
+        {page === 'labour' && (
+          <div>
+            <div className="back-row"><span className="b" onClick={() => setPage('dashboard')}>←</span><h2>👥 Labour Attendance</h2></div>
+            <div className="section-card">
+              <div className="simple-input-row"><label>মোট শ্রমিক</label>
+                <input type="number" value={dayData.labour.total} onChange={e => setDayData({...dayData, labour:{...dayData.labour, total:e.target.value}})} />
+              </div>
+              <div className="simple-input-row"><label>আজ উপস্থিত</label>
+                <input type="number" value={dayData.labour.present} onChange={e => setDayData({...dayData, labour:{...dayData.labour, present:e.target.value}})} />
+              </div>
+            </div>
+            <button className="primary-btn" onClick={saveDay}>💾 সেভ করুন</button>
+            <div className="status">{saveStatus}</div>
+          </div>
+        )}
+
+        {page === 'nursery' && (
+          <div>
+            <div className="back-row"><span className="b" onClick={() => setPage('dashboard')}>←</span><h2>🌱 Nursery</h2></div>
+            <div className="section-card">
+              <div className="simple-input-row"><label>Plants in Nursery</label>
+                <input type="number" value={dayData.nursery.plants} onChange={e => setDayData({...dayData, nursery:{plants:e.target.value}})} />
+              </div>
+            </div>
+            <button className="primary-btn" onClick={saveDay}>💾 সেভ করুন</button>
+            <div className="status">{saveStatus}</div>
+          </div>
+        )}
+
+        {page === 'more' && (
+          <div>
+            <div className="back-row"><span className="b" onClick={() => setPage('dashboard')}>←</span><h2>☰ More</h2></div>
+            <div className="section-card menu-list">
+              <div className="menu-item" onClick={() => setPage('fertilizer')}>🧪 সার প্রয়োগ (COC/MOP)</div>
+              <div className="menu-item" onClick={() => auth.signOut()}>🚪 লগআউট</div>
+            </div>
+          </div>
+        )}
+
+        {page === 'fertilizer' && (
+          <div>
+            <div className="back-row"><span className="b" onClick={() => setPage('more')}>←</span><h2>🧪 সার প্রয়োগ — LKL</h2></div>
+            <GenericTable type="fertilizer" data={dayData.fertilizer} setData={arr => setDayData({...dayData, fertilizer: arr})} />
+            <button className="primary-btn" style={{marginTop:12}} onClick={saveDay}>💾 সেভ করুন</button>
+            <div className="status">{saveStatus}</div>
+          </div>
+        )}
+      </main>
+
+      <nav className="bottom">
+        <div className={"nav-item" + (page==='dashboard'?' active':'')} onClick={() => setPage('dashboard')}><span className="ic">🏠</span>Dashboard</div>
+        <div className={"nav-item" + (page==='labour'?' active':'')} onClick={() => setPage('labour')}><span className="ic">👥</span>Labour</div>
+        <div className={"nav-item" + (page==='greenleaf'?' active':'')} onClick={() => setPage('greenleaf')}><span className="ic">🍃</span>Green Leaf</div>
+        <div className={"nav-item" + (page==='spray'?' active':'')} onClick={() => setPage('spray')}><span className="ic">🧴</span>Spray</div>
+        <div className={"nav-item" + (page==='more' || page==='fertilizer'?' active':'')} onClick={() => setPage('more')}><span className="ic">☰</span>More</div>
+      </nav>
+      <div id="printArea"></div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
